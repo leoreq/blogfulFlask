@@ -30,6 +30,15 @@ def posts(page=1, paginate_by=10):
         page=page,
         total_pages=total_pages,
     )
+
+
+@app.route("/post/<int:postid>")
+def post(postid=1):
+    post = session.query(Post).get(postid)
+    return render_template("post.html",
+        post=post
+    )
+    
 #############This is the post add section############# 
 @app.route("/post/add", methods=["GET"])
 def add_post_get():
@@ -45,5 +54,30 @@ def add_post_post():
         content=mistune.markdown(request.form["content"]),
     )
     session.add(post)
+    session.commit()
+    return redirect(url_for("posts"))
+
+#############This is the post edit section############# 
+@app.route("/post/<int:postid>/edit", methods=["GET"])
+def edit_post_get(postid=1):
+    post = session.query(Post).get(postid)
+    return render_template("add_post.html",post_title_value=post.title,post_content_value=post.content)
+
+@app.route("/post/<int:postid>/edit", methods=["POST"])
+def edit_post_post(postid):
+    post = session.query(Post).get(postid)
+    #post = Post(
+    #    title=request.form["title"],
+    #    content=mistune.markdown(request.form["content"]),
+    #)
+    post.title=request.form["title"]
+    post.content=mistune.markdown(request.form["content"])
+    session.commit()
+    return redirect(url_for("post",postid=postid))
+
+@app.route("/post/<int:postid>/delete", methods=["GET","POST"])
+def delete_post_post(postid):
+    post = session.query(Post).get(postid)
+    session.delete(post)
     session.commit()
     return redirect(url_for("posts"))
