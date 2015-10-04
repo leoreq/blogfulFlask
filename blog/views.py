@@ -8,6 +8,7 @@ from .models import Post
 @app.route("/page/<int:page>")
 def posts(page=1, paginate_by=10):
     # Zero-indexed page
+
     page_index = page - 1
 
     count = session.query(Post).count()
