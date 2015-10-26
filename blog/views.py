@@ -3,6 +3,7 @@ from flask import render_template
 from blog import app
 from .database import session
 from .models import Post
+from flask.ext.login import login_required
 
 @app.route("/")
 @app.route("/page/<int:page>")
@@ -42,17 +43,21 @@ def post(postid=1):
     
 #############This is the post add section############# 
 @app.route("/post/add", methods=["GET"])
+@login_required
 def add_post_get():
     return render_template("add_post.html",post_title_value="",post_content_value="")
 
 import mistune
 from flask import request, redirect, url_for
+from flask.ext.login import current_user
 
 @app.route("/post/add", methods=["POST"])
+@login_required
 def add_post_post():
     post = Post(
         title=request.form["title"],
         content=mistune.markdown(request.form["content"]),
+        author=current_user
     )
     session.add(post)
     session.commit()
@@ -60,11 +65,13 @@ def add_post_post():
 
 #############This is the post edit section############# 
 @app.route("/post/<int:postid>/edit", methods=["GET"])
+@login_required
 def edit_post_get(postid=1):
     post = session.query(Post).get(postid)
     return render_template("add_post.html",post_title_value=post.title,post_content_value=post.content)
 
 @app.route("/post/<int:postid>/edit", methods=["POST"])
+@login_required
 def edit_post_post(postid):
     post = session.query(Post).get(postid)
     #post = Post(
@@ -77,8 +84,32 @@ def edit_post_post(postid):
     return redirect(url_for("post",postid=postid))
 
 @app.route("/post/<int:postid>/delete", methods=["GET","POST"])
+@login_required
 def delete_post_post(postid):
     post = session.query(Post).get(postid)
     session.delete(post)
     session.commit()
     return redirect(url_for("posts"))
+    
+######### Implementing the login Method######
+
+@app.route("/login", methods=["GET"])
+def login_get():
+    return render_template("login.html")
+
+from flask import flash
+from flask.ext.login import login_user
+from werkzeug.security import check_password_hash
+from .models import User
+
+@app.route("/login", methods=["POST"])
+def login_post():
+    email = request.form["email"]
+    password = request.form["password"]
+    user = session.query(User).filter_by(email=email).first()
+    if not user or not check_password_hash(user.password, password):
+        flash("Incorrect username or password", "danger")
+        return redirect(url_for("login_get"))
+
+    login_user(user)
+    return redirect(request.args.get('next') or url_for("posts"))
